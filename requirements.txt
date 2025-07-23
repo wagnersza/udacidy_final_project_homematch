@@ -1,0 +1,25 @@
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+jinja2==3.1.2
+python-multipart==0.0.6
+
+# AI/ML Packages
+openai>=1.10.0
+chromadb==0.4.18
+
+# Environment and Configuration
+python-dotenv==1.0.0
+
+# Data Processing
+pydantic==2.5.0
+numpy==1.24.3
+pandas==2.0.3
+
+# HTTP Requests
+requests==2.31.0
+httpx==0.25.2
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1

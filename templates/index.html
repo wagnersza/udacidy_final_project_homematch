@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeMatch - Personalized Real Estate Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 HomeMatch</h1>
+            <p class="subtitle">Your Personalized Real Estate Agent</p>
+        </header>
+
+        <main>
+            <section class="preferences-section">
+                <h2>Tell us about your dream home</h2>
+                <form id="preferencesForm" method="post" action="/api/search">
+                    <div class="form-group">
+                        <label for="preferences">Describe your ideal home and preferences:</label>
+                        <textarea 
+                            id="preferences" 
+                            name="preferences" 
+                            rows="6" 
+                            placeholder="Example: I want a 3-bedroom house in a quiet neighborhood with good schools, a backyard for gardening, and easy access to public transportation. Budget around $800,000."
+                            required
+                        ></textarea>
+                    </div>
+                    
+                    <button type="submit" class="search-btn">
+                        🔍 Find My Perfect Home
+                    </button>
+                </form>
+            </section>
+
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <h2>Personalized Recommendations</h2>
+                <div id="results">
+                    <!-- Results will be populated here -->
+                </div>
+            </section>
+
+            <section class="info-section">
+                <h3>How HomeMatch Works</h3>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h4>🤖 AI-Powered Understanding</h4>
+                        <p>Our advanced language model understands your preferences in natural language.</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔍 Semantic Search</h4>
+                        <p>We use vector databases to find properties that match your unique needs.</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>✨ Personalized Descriptions</h4>
+                        <p>Each listing is rewritten to highlight what matters most to you.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 HomeMatch - Built with FastAPI & ChromaDB</p>
+        </footer>
+    </div>
+
+    <script>
+        // Basic form handling - will be enhanced in later phases
+        document.getElementById('preferencesForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const preferences = formData.get('preferences');
+            
+            if (!preferences.trim()) {
+                alert('Please describe your preferences');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                // Show results section
+                document.getElementById('resultsSection').style.display = 'block';
+                document.getElementById('results').innerHTML = `
+                    <div class="placeholder-result">
+                        <h4>Search Results</h4>
+                        <p>${result.message}</p>
+                        <p><strong>Your preferences:</strong> ${preferences}</p>
+                        <p><em>Full functionality will be available after implementing the search engine and data generation modules.</em></p>
+                    </div>
+                `;
+                
+                // Scroll to results
+                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while searching. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>
