@@ -5,9 +5,10 @@ using Large Language Models and vector databases.
 """
 
 import os
+import time
 import asyncio
 from typing import List, Dict, Any
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -19,72 +20,267 @@ from modules.data_generator import DataGenerator
 from modules.vector_store import VectorStore
 from modules.preference_processor import PreferenceProcessor, UserPreferences
 from modules.description_personalizer import DescriptionPersonalizer
+from modules.config import get_settings, validate_configuration, Settings
+from modules.monitoring import get_logger, get_health_checker, timing_decorator, HomeMatchLogger
+from modules.testing import QualityAssuranceTester
 
 # Load environment variables
 load_dotenv()
 
+# Initialize settings and validation
+settings = get_settings()
+config_validation = validate_configuration()
+
+# Setup logging
+logger = get_logger("homewatch")
+if not config_validation["valid"]:
+    logger.error("Configuration validation failed", extra={"errors": config_validation["errors"]})
+    for error in config_validation["errors"]:
+        logger.error(f"Config error: {error}")
+
 # Initialize FastAPI app
 app = FastAPI(
-    title="HomeMatch",
+    title=settings.app_name,
     description="Personalized Real Estate Recommendation System using RAG architecture",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/api/openapi.json"
+    version=settings.app_version,
+    docs_url="/docs" if settings.is_development() else None,
+    redoc_url="/redoc" if settings.is_development() else None,
+    openapi_url="/api/openapi.json" if settings.is_development() else None
 )
 
-# Initialize modules
+# Initialize modules with enhanced logging
+logger.info("Initializing application modules")
 data_generator = DataGenerator()
 vector_store = VectorStore()
 preference_processor = PreferenceProcessor()
 description_personalizer = DescriptionPersonalizer()
+qa_tester = QualityAssuranceTester()
+
+# Initialize health checker and register health checks
+health_checker = get_health_checker()
+
+def check_openai_connection() -> Dict[str, Any]:
+    """Health check for OpenAI API connection"""
+    try:
+        # Simple test to verify API key is valid
+        if not settings.openai_api_key or settings.openai_api_key == "your_api_key_here":
+            return {
+                "status": "unhealthy",
+                "message": "OpenAI API key not configured"
+            }
+        return {
+            "status": "healthy",
+            "message": "OpenAI API configuration appears valid"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "message": f"OpenAI connection check failed: {str(e)}"
+        }
+
+def check_vector_database() -> Dict[str, Any]:
+    """Health check for vector database"""
+    try:
+        # Test vector store connection
+        listings = vector_store.get_all_listings()
+        return {
+            "status": "healthy",
+            "message": f"Vector database accessible with {len(listings)} listings",
+            "listing_count": len(listings)
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy", 
+            "message": f"Vector database check failed: {str(e)}"
+        }
+
+def check_data_files() -> Dict[str, Any]:
+    """Health check for data files"""
+    try:
+        listings = data_generator.load_listings_from_file()
+        if listings:
+            return {
+                "status": "healthy",
+                "message": f"Data files accessible with {len(listings)} listings",
+                "file_listing_count": len(listings)
+            }
+        else:
+            return {
+                "status": "degraded",
+                "message": "No listings found in data files"
+            }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "message": f"Data file check failed: {str(e)}"
+        }
+
+# Register health checks
+health_checker.register_check("openai", check_openai_connection)
+health_checker.register_check("vector_database", check_vector_database)
+health_checker.register_check("data_files", check_data_files)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Global variables for configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
-CHROMA_PERSIST_DIRECTORY = os.getenv("CHROMA_PERSIST_DIRECTORY", "./database/chroma_db")
+# Global variables for configuration (backward compatibility)
+OPENAI_API_KEY = settings.openai_api_key
+OPENAI_BASE_URL = settings.openai_base_url
+CHROMA_PERSIST_DIRECTORY = settings.chroma_persist_directory
+
+logger.info("Application initialization completed")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Home page with user preference form"""
+    logger.info("Home page accessed")
     return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "message": "HomeMatch API is running"}
+    """Basic health check endpoint"""
+    logger.debug("Basic health check requested")
+    return {"status": "healthy", "message": "HomeMatch API is running", "timestamp": time.time()}
+
+
+@app.get("/health/detailed")
+async def detailed_health_check():
+    """Comprehensive health check with all component status"""
+    logger.info("Detailed health check requested")
+    
+    try:
+        health_results = health_checker.run_all_checks()
+        
+        # Add configuration validation results
+        health_results["configuration"] = config_validation
+        
+        # Add application metrics
+        health_results["metrics"] = logger.metrics.get_metrics_summary()
+        
+        # Set appropriate HTTP status code
+        status_code = 200
+        if health_results["overall_status"] == "unhealthy":
+            status_code = 503
+        elif health_results["overall_status"] == "degraded":
+            status_code = 200  # Still functional
+            
+        return JSONResponse(content=health_results, status_code=status_code)
+        
+    except Exception as e:
+        logger.error("Health check failed", error=e)
+        return JSONResponse(
+            content={
+                "overall_status": "error",
+                "error": str(e),
+                "timestamp": time.time()
+            },
+            status_code=500
+        )
 
 
 @app.get("/api/config")
 async def get_config():
     """Get API configuration information"""
+    logger.debug("Configuration information requested")
     return {
-        "api_version": "1.0.0",
-        "environment": os.getenv("ENVIRONMENT", "development"),
+        "api_version": settings.app_version,
+        "environment": settings.environment,
         "features": {
-            "ai_powered_search": True,
-            "personalization": True,
+            "ai_powered_search": settings.enable_advanced_search,
+            "personalization": settings.enable_personalization,
             "vector_search": True,
-            "synthetic_data_generation": True
+            "synthetic_data_generation": settings.enable_synthetic_data_generation,
+            "caching": settings.enable_caching,
+            "rate_limiting": settings.enable_rate_limiting
         },
         "endpoints": {
             "search": "/api/search",
             "personalize": "/api/personalize", 
             "generate_listings": "/api/generate-listings",
-            "preferences": "/api/preferences"
+            "preferences": "/api/preferences",
+            "health": "/health",
+            "detailed_health": "/health/detailed",
+            "metrics": "/api/metrics",
+            "testing": "/api/test"
+        },
+        "limits": {
+            "max_search_results": settings.max_search_results,
+            "request_timeout": settings.request_timeout,
+            "max_concurrent_requests": settings.max_concurrent_requests
         }
     }
 
 
+@app.get("/api/metrics")
+async def get_metrics():
+    """Get application performance metrics"""
+    logger.debug("Metrics requested")
+    
+    try:
+        metrics = logger.metrics.get_metrics_summary()
+        return JSONResponse(content=metrics)
+    except Exception as e:
+        logger.error("Failed to retrieve metrics", error=e)
+        raise HTTPException(status_code=500, detail=f"Error retrieving metrics: {str(e)}")
+
+
+@app.post("/api/test")
+async def run_comprehensive_tests():
+    """Run comprehensive system tests"""
+    logger.info("Comprehensive testing requested")
+    
+    try:
+        test_results = qa_tester.run_comprehensive_tests()
+        
+        # Log test results summary
+        summary = test_results["test_summary"]
+        logger.info(
+            f"Testing completed: {summary['passed']}/{summary['total_tests']} passed",
+            extra={"test_summary": summary}
+        )
+        
+        return JSONResponse(content=test_results)
+        
+    except Exception as e:
+        logger.error("Comprehensive testing failed", error=e)
+        raise HTTPException(status_code=500, detail=f"Error running tests: {str(e)}")
+
+
+@app.get("/api/test/search")
+async def test_search_functionality():
+    """Test search functionality specifically"""
+    logger.info("Search functionality testing requested")
+    
+    try:
+        search_results = qa_tester.test_search_functionality()
+        return JSONResponse(content=search_results)
+    except Exception as e:
+        logger.error("Search testing failed", error=e)
+        raise HTTPException(status_code=500, detail=f"Error testing search: {str(e)}")
+
+
+@app.get("/api/test/performance") 
+async def test_performance():
+    """Test system performance"""
+    logger.info("Performance testing requested")
+    
+    try:
+        performance_results = qa_tester.test_performance()
+        return JSONResponse(content=performance_results)
+    except Exception as e:
+        logger.error("Performance testing failed", error=e)
+        raise HTTPException(status_code=500, detail=f"Error testing performance: {str(e)}")
+
+
 @app.get("/api/listings")
+@timing_decorator("get_listings", logger)
 async def get_listings():
     """Get all available listings"""
+    logger.info("Listings requested")
+    
     try:
         # First, try to load from file
         listings = data_generator.load_listings_from_file()
@@ -102,18 +298,23 @@ async def get_listings():
                     }
                     listings.append(listing)
         
+        logger.info(f"Retrieved {len(listings)} listings")
         return JSONResponse({
             "count": len(listings),
             "listings": listings
         })
         
     except Exception as e:
+        logger.error("Failed to retrieve listings", error=e)
         raise HTTPException(status_code=500, detail=f"Error retrieving listings: {str(e)}")
 
 
 @app.post("/api/generate-listings")
+@timing_decorator("generate_listings", logger)
 async def generate_listings(count: int = 12):
     """Generate new synthetic real estate listings"""
+    logger.info(f"Generating {count} new listings")
+    
     try:
         print(f"🏠 Generating {count} new listings...")
         
@@ -126,6 +327,9 @@ async def generate_listings(count: int = 12):
         # Add to vector database
         added_count = vector_store.add_multiple_listings(listings)
         
+        logger.info(f"Successfully generated {len(listings)} listings")
+        logger.metrics.increment_counter("listings_generated", {"count": str(len(listings))})
+        
         return JSONResponse({
             "message": f"Successfully generated {len(listings)} listings",
             "count": len(listings),
@@ -135,19 +339,31 @@ async def generate_listings(count: int = 12):
         })
         
     except Exception as e:
+        logger.error("Failed to generate listings", error=e)
+        logger.metrics.increment_counter("listings_generation_errors")
         raise HTTPException(status_code=500, detail=f"Error generating listings: {str(e)}")
 
 
 @app.post("/api/search")
+@timing_decorator("search_listings", logger)
 async def search_listings(request: Request, preferences: str = Form(...), 
                          use_advanced_search: bool = Form(default=True),
                          max_results: int = Form(default=5)):
     """Enhanced search for listings based on user preferences with intelligent processing"""
+    logger.info(f"Search request: '{preferences[:100]}...'")
+    
     try:
         if not preferences.strip():
             raise HTTPException(status_code=400, detail="Preferences cannot be empty")
         
+        # Validate max_results parameter
+        max_results = min(max_results, settings.max_search_results)
+        
         print(f"🔍 Processing search request: '{preferences}'")
+        
+        # Record search metrics
+        logger.metrics.increment_counter("search_requests")
+        search_start_time = time.time()
         
         if use_advanced_search:
             # Use enhanced preference-based search
@@ -391,18 +607,43 @@ async def get_personalized_descriptions(request: Request,
 
 
 if __name__ == "__main__":
-    # Verify environment variables
-    if not OPENAI_API_KEY or OPENAI_API_KEY == "your_api_key_here":
-        print("Warning: OPENAI_API_KEY not set or using placeholder value")
+    # Setup logging configuration
+    import logging.config
+    log_config = settings.get_log_config()
+    logging.config.dictConfig(log_config)
     
-    print("Starting HomeMatch application...")
-    print(f"OpenAI Base URL: {OPENAI_BASE_URL}")
-    print(f"Chroma DB Directory: {CHROMA_PERSIST_DIRECTORY}")
+    # Verify configuration
+    logger.info("Starting HomeMatch application...")
+    logger.info(f"Environment: {settings.environment}")
+    logger.info(f"Debug mode: {settings.debug}")
+    logger.info(f"OpenAI Base URL: {settings.openai_base_url}")
+    logger.info(f"Chroma DB Directory: {settings.chroma_persist_directory}")
     
+    # Log configuration validation results
+    if config_validation["valid"]:
+        logger.info("Configuration validation passed")
+    else:
+        logger.warning("Configuration validation failed")
+        for error in config_validation["errors"]:
+            logger.error(f"Config error: {error}")
+        for warning in config_validation["warnings"]:
+            logger.warning(f"Config warning: {warning}")
+    
+    # Log feature flags
+    logger.info("Feature flags:", extra={
+        "synthetic_data": settings.enable_synthetic_data_generation,
+        "personalization": settings.enable_personalization,
+        "advanced_search": settings.enable_advanced_search,
+        "caching": settings.enable_caching,
+        "rate_limiting": settings.enable_rate_limiting
+    })
+    
+    # Start the server
     uvicorn.run(
         "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        host=settings.host,
+        port=settings.port,
+        reload=settings.reload and settings.is_development(),
+        log_level=settings.log_level.lower(),
+        access_log=True
     )

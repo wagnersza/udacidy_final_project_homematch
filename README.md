@@ -11,6 +11,12 @@ HomeMatch transforms standard real estate listings into personalized narratives 
 - **OpenAI API** for language model integration
 - **Jinja2** for HTML templating
 
+## Application Screenshot
+
+![HomeMatch Application Interface](assets/HomeMatch%20-%20Personalized%20Real%20Estate%20Agent.pdf)
+
+*The HomeMatch web interface showing the personalized real estate recommendation system in action. Users can input their preferences and receive AI-powered, personalized property recommendations.*
+
 ## Features
 
 - 🤖 **AI-Powered Understanding**: Natural language processing of user preferences
