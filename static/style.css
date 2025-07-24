@@ -59,6 +59,44 @@ main {
     margin-bottom: 1.5rem;
 }
 
+.form-options {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.checkbox-group {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+    transform: scale(1.2);
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-row label {
+    font-weight: 500;
+    min-width: 120px;
+}
+
+.form-row select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+}
+
 label {
     display: block;
     margin-bottom: 0.5rem;
@@ -171,8 +209,132 @@ textarea:focus {
 footer {
     text-align: center;
     color: white;
-    padding: 1rem;
+    margin-top: 2rem;
     opacity: 0.8;
+}
+
+.search-summary {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border-left: 4px solid #667eea;
+}
+
+.search-info h4 {
+    color: #4a5568;
+    margin-bottom: 1rem;
+}
+
+.preferences-summary {
+    margin-top: 1rem;
+}
+
+.preferences-summary h5 {
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+.preferences-summary ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.preferences-summary li {
+    padding: 0.25rem 0;
+    color: #6c757d;
+}
+
+.scores {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+}
+
+.preference, .composite {
+    background: #48bb78;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.composite {
+    background: #ed8936;
+}
+
+.personalized-content {
+    border-left: 3px solid #48bb78;
+    padding-left: 1rem;
+}
+
+.personalized-description {
+    color: #2d3748;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+
+.personalization-info {
+    margin-top: 0.5rem;
+}
+
+.personalization-info small {
+    color: #48bb78;
+    font-weight: 500;
+}
+
+.highlights, .matches {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #f0fff4;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #2f855a;
+}
+
+.listing-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.personalize-btn, .details-btn, .toggle-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.personalize-btn {
+    background: #667eea;
+    color: white;
+}
+
+.personalize-btn:hover {
+    background: #5a67d8;
+}
+
+.details-btn {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.details-btn:hover {
+    background: #cbd5e0;
+}
+
+.toggle-btn {
+    background: #fed7d7;
+    color: #c53030;
+    margin-top: 0.5rem;
+}
+
+.toggle-btn:hover {
+    background: #feb2b2;
 }
 
 /* Responsive Design */

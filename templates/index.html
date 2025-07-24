@@ -28,6 +28,25 @@
                         ></textarea>
                     </div>
                     
+                    <div class="form-options">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="useAdvancedSearch" name="use_advanced_search" checked>
+                            <label for="useAdvancedSearch">Use AI-powered preference analysis</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="enablePersonalization" name="enable_personalization">
+                            <label for="enablePersonalization">Enable personalized descriptions</label>
+                        </div>
+                        <div class="form-row">
+                            <label for="maxResults">Maximum results:</label>
+                            <select id="maxResults" name="max_results">
+                                <option value="5">5 listings</option>
+                                <option value="10">10 listings</option>
+                                <option value="15">15 listings</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="search-btn">
                         🔍 Find My Perfect Home
                     </button>
@@ -36,6 +55,7 @@
 
             <section class="results-section" id="resultsSection" style="display: none;">
                 <h2>Personalized Recommendations</h2>
+                <div id="searchSummary" class="search-summary"></div>
                 <div id="results">
                     <!-- Results will be populated here -->
                 </div>
@@ -46,6 +66,9 @@
                     </button>
                     <button onclick="showAllListings()" class="action-btn">
                         📋 View All Listings
+                    </button>
+                    <button onclick="exportResults()" class="action-btn">
+                        📤 Export Results
                     </button>
                 </div>
             </section>
@@ -76,6 +99,8 @@
 
     <script>
         // Form handling and API interactions
+        let currentSearchData = null;
+        
         document.getElementById('preferencesForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -102,8 +127,16 @@
                     throw new Error(result.detail || 'Search failed');
                 }
                 
+                currentSearchData = result;
+                
                 // Display results
                 displayResults(result, preferences);
+                
+                // If personalization is enabled, get personalized descriptions
+                const enablePersonalization = formData.get('enable_personalization');
+                if (enablePersonalization && result.results && result.results.length > 0) {
+                    await personalizeResults(preferences, result.results);
+                }
                 
             } catch (error) {
                 console.error('Error:', error);
@@ -127,31 +160,75 @@
         }
         
         function displayResults(data, preferences) {
+            const summaryDiv = document.getElementById('searchSummary');
             const resultsDiv = document.getElementById('results');
             
-            if (data.results && data.results.length > 0) {
-                let html = `
-                    <div class="search-summary">
+            // Display search summary
+            if (data.search_type && data.structured_preferences) {
+                const structuredPrefs = data.structured_preferences;
+                summaryDiv.innerHTML = `
+                    <div class="search-info">
+                        <h4>🎯 Search Results</h4>
+                        <p><strong>Query:</strong> "${preferences}"</p>
+                        <p><strong>Search Type:</strong> ${data.search_type}</p>
+                        <div class="preferences-summary">
+                            <h5>🧠 Understood Preferences:</h5>
+                            <ul>
+                                ${structuredPrefs.property_type !== 'any' ? `<li><strong>Property Type:</strong> ${structuredPrefs.property_type}</li>` : ''}
+                                ${structuredPrefs.neighborhoods.length > 0 ? `<li><strong>Neighborhoods:</strong> ${structuredPrefs.neighborhoods.join(', ')}</li>` : ''}
+                                ${structuredPrefs.amenities.length > 0 ? `<li><strong>Amenities:</strong> ${structuredPrefs.amenities.join(', ')}</li>` : ''}
+                                ${structuredPrefs.lifestyle_keywords.length > 0 ? `<li><strong>Lifestyle:</strong> ${structuredPrefs.lifestyle_keywords.join(', ')}</li>` : ''}
+                                ${structuredPrefs.price_range !== 'any' ? `<li><strong>Price Range:</strong> ${structuredPrefs.price_range.replace(/_/g, ' ')}</li>` : ''}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            } else {
+                summaryDiv.innerHTML = `
+                    <div class="search-info">
                         <h4>🎯 Found ${data.count} matches for: "${preferences}"</h4>
                         <p>${data.message}</p>
                     </div>
-                    <div class="listings-grid">
                 `;
+            }
+            
+            if (data.results && data.results.length > 0) {
+                let html = '<div class="listings-grid">';
                 
                 data.results.forEach(listing => {
                     const relevanceScore = listing.relevance_score ? 
                         `<span class="relevance">Relevance: ${(listing.relevance_score * 100).toFixed(0)}%</span>` : '';
                     
+                    const preferenceScore = listing.preference_score ? 
+                        `<span class="preference">Preference Match: ${(listing.preference_score * 100).toFixed(0)}%</span>` : '';
+                    
+                    const compositeScore = listing.composite_score ? 
+                        `<span class="composite">Overall Score: ${(listing.composite_score * 100).toFixed(0)}%</span>` : '';
+                    
                     html += `
-                        <div class="listing-card">
+                        <div class="listing-card" data-listing-id="${listing.id}">
                             <div class="listing-header">
                                 <h5>${listing.neighborhood || 'Unknown Area'}</h5>
-                                ${relevanceScore}
+                                <div class="scores">
+                                    ${relevanceScore}
+                                    ${preferenceScore}
+                                    ${compositeScore}
+                                </div>
                             </div>
                             <div class="listing-details">
                                 <p class="price">💰 ${listing.price || 'Price TBD'}</p>
                                 <p class="specs">🛏️ ${listing.bedrooms || 0} bed • 🛁 ${listing.bathrooms || 0} bath • 📏 ${listing.house_size || 'Size TBD'}</p>
-                                <p class="description">${listing.description || 'No description available'}</p>
+                                <div class="description-container">
+                                    <p class="description" id="desc-${listing.id}">${listing.description || 'No description available'}</p>
+                                </div>
+                                <div class="listing-actions">
+                                    <button onclick="personalizeListing('${listing.id}')" class="personalize-btn">
+                                        ✨ Personalize
+                                    </button>
+                                    <button onclick="showListingDetails('${listing.id}')" class="details-btn">
+                                        📊 Details
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -167,6 +244,168 @@
                         <p>Try adjusting your search criteria or generate new listings.</p>
                     </div>
                 `;
+            }
+        }
+        
+        async function personalizeResults(preferences, results) {
+            const listingIds = results.map(r => r.id).join(',');
+            
+            try {
+                const formData = new FormData();
+                formData.append('preferences', preferences);
+                formData.append('listing_ids', listingIds);
+                formData.append('use_llm', 'true');
+                
+                const response = await fetch('/api/personalized-descriptions', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.results) {
+                    // Update descriptions with personalized content
+                    result.results.forEach(personalizedResult => {
+                        const descElement = document.getElementById(`desc-${personalizedResult.listing_id}`);
+                        if (descElement) {
+                            descElement.innerHTML = `
+                                <div class="personalized-content">
+                                    <div class="personalized-description">${personalizedResult.personalized_description}</div>
+                                    <div class="personalization-info">
+                                        <small>✨ Personalized for you (Score: ${(personalizedResult.personalization_score * 100).toFixed(0)}%)</small>
+                                        ${personalizedResult.highlights.length > 0 ? 
+                                            `<div class="highlights">🌟 ${personalizedResult.highlights.join(' • ')}</div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error personalizing descriptions:', error);
+            }
+        }
+        
+        async function personalizeListing(listingId) {
+            const preferences = document.getElementById('preferences').value;
+            if (!preferences) {
+                alert('Please enter your preferences first');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('listing_id', listingId);
+                formData.append('preferences', preferences);
+                formData.append('use_llm', 'true');
+                
+                const response = await fetch('/api/personalize', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const descElement = document.getElementById(`desc-${listingId}`);
+                    if (descElement) {
+                        descElement.innerHTML = `
+                            <div class="personalized-content">
+                                <div class="personalized-description">${result.personalized_description}</div>
+                                <div class="personalization-info">
+                                    <small>✨ Personalized for you (Score: ${(result.personalization_score * 100).toFixed(0)}%)</small>
+                                    ${result.highlights.length > 0 ? 
+                                        `<div class="highlights">🌟 ${result.highlights.join(' • ')}</div>` : ''}
+                                    ${result.preference_matches.length > 0 ? 
+                                        `<div class="matches">✅ ${result.preference_matches.join(' • ')}</div>` : ''}
+                                </div>
+                                <button onclick="showOriginalDescription('${listingId}', \`${result.original_description.replace(/`/g, '\\`')}\`)" class="toggle-btn">
+                                    Show Original
+                                </button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    throw new Error(result.detail || 'Personalization failed');
+                }
+            } catch (error) {
+                console.error('Error personalizing listing:', error);
+                alert('Failed to personalize listing. Please try again.');
+            }
+        }
+        
+        function showOriginalDescription(listingId, originalDescription) {
+            const descElement = document.getElementById(`desc-${listingId}`);
+            if (descElement) {
+                descElement.innerHTML = `
+                    <div class="original-content">
+                        <p>${originalDescription}</p>
+                        <button onclick="personalizeListing('${listingId}')" class="toggle-btn">
+                            Show Personalized
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        function showListingDetails(listingId) {
+            // Find the listing in current search data
+            if (currentSearchData && currentSearchData.results) {
+                const listing = currentSearchData.results.find(l => l.id === listingId);
+                if (listing) {
+                    let details = `
+                        <h4>📊 Listing Details: ${listing.neighborhood}</h4>
+                        <p><strong>ID:</strong> ${listing.id}</p>
+                        <p><strong>Price:</strong> ${listing.price}</p>
+                        <p><strong>Bedrooms:</strong> ${listing.bedrooms}</p>
+                        <p><strong>Bathrooms:</strong> ${listing.bathrooms}</p>
+                        <p><strong>Size:</strong> ${listing.house_size}</p>
+                    `;
+                    
+                    if (listing.ranking_details) {
+                        details += `
+                            <h5>🎯 Ranking Details:</h5>
+                            <ul>
+                                <li>Semantic Score: ${(listing.ranking_details.semantic_score * 100).toFixed(0)}%</li>
+                                <li>Preference Score: ${(listing.ranking_details.preference_score * 100).toFixed(0)}%</li>
+                                <li>Location Score: ${(listing.ranking_details.location_score * 100).toFixed(0)}%</li>
+                                <li>Amenity Score: ${(listing.ranking_details.amenity_score * 100).toFixed(0)}%</li>
+                                <li>Size Score: ${(listing.ranking_details.size_score * 100).toFixed(0)}%</li>
+                            </ul>
+                        `;
+                    }
+                    
+                    alert(details);
+                }
+            }
+        }
+        
+        function exportResults() {
+            if (currentSearchData && currentSearchData.results) {
+                const csvContent = [
+                    ['ID', 'Neighborhood', 'Price', 'Bedrooms', 'Bathrooms', 'Size', 'Relevance Score', 'Preference Score', 'Composite Score'],
+                    ...currentSearchData.results.map(listing => [
+                        listing.id,
+                        listing.neighborhood || '',
+                        listing.price || '',
+                        listing.bedrooms || '',
+                        listing.bathrooms || '',
+                        listing.house_size || '',
+                        listing.relevance_score || '',
+                        listing.preference_score || '',
+                        listing.composite_score || ''
+                    ])
+                ].map(row => row.join(',')).join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'homematch_results.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
             }
         }
         

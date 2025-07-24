@@ -134,16 +134,32 @@ class VectorStore:
         print(f"🎉 Successfully added {success_count}/{len(listings)} listings to vector database!")
         return success_count
     
-    def search_listings(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
-        """Search for listings based on semantic similarity"""
+    def search_listings(self, query: str, n_results: int = 5, metadata_filters: Optional[Dict[str, Any]] = None, 
+                       where_document: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Search for listings based on semantic similarity with advanced filtering"""
         try:
             print(f"🔍 Searching for: '{query}'")
+            if metadata_filters:
+                print(f"🎯 With metadata filters: {metadata_filters}")
+            if where_document:
+                print(f"📄 With document filters: {where_document}")
             
-            # Perform semantic search
-            results = self.collection.query(
-                query_texts=[query],
-                n_results=n_results
-            )
+            # Build query parameters
+            query_params = {
+                "query_texts": [query],
+                "n_results": n_results
+            }
+            
+            # Add metadata filters if provided
+            if metadata_filters:
+                query_params["where"] = metadata_filters
+            
+            # Add document content filters if provided
+            if where_document:
+                query_params["where_document"] = where_document
+            
+            # Perform semantic search with filters
+            results = self.collection.query(**query_params)
             
             # Format results
             formatted_results = []
@@ -154,7 +170,8 @@ class VectorStore:
                         'id': results['ids'][0][i],
                         'content': doc,
                         'metadata': results['metadatas'][0][i],
-                        'distance': results['distances'][0][i] if 'distances' in results else None
+                        'distance': results['distances'][0][i] if 'distances' in results else None,
+                        'similarity_score': 1 - results['distances'][0][i] if 'distances' in results and results['distances'][0][i] is not None else 0.0
                     }
                     formatted_results.append(result)
             
@@ -164,6 +181,225 @@ class VectorStore:
         except Exception as e:
             print(f"❌ Error searching listings: {e}")
             return []
+    
+    def search_with_preferences(self, preferences_obj, n_results: int = 5, semantic_weight: float = 0.7) -> List[Dict[str, Any]]:
+        """
+        Advanced search combining semantic similarity with preference-based filtering
+        
+        Args:
+            preferences_obj: UserPreferences object from preference_processor
+            n_results: Number of results to return
+            semantic_weight: Weight for semantic similarity vs metadata matching (0.0-1.0)
+            
+        Returns:
+            List of ranked and scored listings
+        """
+        try:
+            from .preference_processor import UserPreferences, PropertyType, PriceRange
+            
+            print(f"🎯 Searching with structured preferences")
+            
+            # Build semantic query from preferences
+            semantic_query_parts = []
+            
+            # Add location preferences
+            if preferences_obj.neighborhoods:
+                semantic_query_parts.extend(preferences_obj.neighborhoods)
+            if preferences_obj.location_keywords:
+                semantic_query_parts.extend(preferences_obj.location_keywords)
+            
+            # Add lifestyle preferences
+            if preferences_obj.lifestyle_keywords:
+                semantic_query_parts.extend(preferences_obj.lifestyle_keywords)
+            
+            # Add amenity preferences
+            if preferences_obj.amenities:
+                semantic_query_parts.extend(preferences_obj.amenities)
+            
+            # Add property type
+            if preferences_obj.property_type != PropertyType.ANY:
+                semantic_query_parts.append(preferences_obj.property_type.value)
+            
+            # Create semantic query
+            semantic_query = " ".join(semantic_query_parts) if semantic_query_parts else preferences_obj.raw_input
+            
+            # Build metadata filters
+            metadata_filters = {}
+            
+            # Bedroom filters
+            if preferences_obj.min_bedrooms is not None:
+                metadata_filters["bedrooms"] = {"$gte": preferences_obj.min_bedrooms}
+            if preferences_obj.max_bedrooms is not None:
+                if "bedrooms" in metadata_filters:
+                    metadata_filters["bedrooms"]["$lte"] = preferences_obj.max_bedrooms
+                else:
+                    metadata_filters["bedrooms"] = {"$lte": preferences_obj.max_bedrooms}
+            
+            # Bathroom filters
+            if preferences_obj.min_bathrooms is not None:
+                metadata_filters["bathrooms"] = {"$gte": preferences_obj.min_bathrooms}
+            if preferences_obj.max_bathrooms is not None:
+                if "bathrooms" in metadata_filters:
+                    metadata_filters["bathrooms"]["$lte"] = preferences_obj.max_bathrooms
+                else:
+                    metadata_filters["bathrooms"] = {"$lte": preferences_obj.max_bathrooms}
+            
+            # Build document content filters for amenities and neighborhoods
+            document_filters = {}
+            
+            # Add neighborhood filters
+            if preferences_obj.neighborhoods:
+                # Use OR logic for neighborhoods
+                neighborhood_conditions = []
+                for neighborhood in preferences_obj.neighborhoods:
+                    neighborhood_conditions.append({"$contains": neighborhood.lower()})
+                if len(neighborhood_conditions) == 1:
+                    document_filters = neighborhood_conditions[0]
+                else:
+                    document_filters["$or"] = neighborhood_conditions
+            
+            # Perform the search
+            results = self.search_listings(
+                query=semantic_query,
+                n_results=n_results * 2,  # Get more results for re-ranking
+                metadata_filters=metadata_filters if metadata_filters else None,
+                where_document=document_filters if document_filters else None
+            )
+            
+            # Re-rank results with preference matching
+            ranked_results = self._rank_with_preferences(results, preferences_obj, semantic_weight)
+            
+            return ranked_results[:n_results]
+            
+        except Exception as e:
+            print(f"❌ Error in preference-based search: {e}")
+            # Fallback to basic search
+            return self.search_listings(preferences_obj.raw_input, n_results)
+    
+    def _rank_with_preferences(self, results: List[Dict[str, Any]], preferences_obj, semantic_weight: float) -> List[Dict[str, Any]]:
+        """
+        Re-rank search results based on preference matching
+        
+        Args:
+            results: Initial search results
+            preferences_obj: UserPreferences object
+            semantic_weight: Weight for semantic vs preference matching
+            
+        Returns:
+            Re-ranked results with composite scores
+        """
+        try:
+            from .preference_processor import PropertyType, PriceRange
+            
+            for result in results:
+                metadata = result.get('metadata', {})
+                content = result.get('content', '').lower()
+                
+                # Start with semantic similarity score
+                semantic_score = result.get('similarity_score', 0.0)
+                
+                # Calculate preference matching score
+                preference_score = 0.0
+                total_weight = 0.0
+                
+                # Location preference matching
+                location_weight = preferences_obj.priority_weights.get('location', 1.0)
+                location_score = 0.0
+                
+                if preferences_obj.neighborhoods:
+                    for neighborhood in preferences_obj.neighborhoods:
+                        if neighborhood.lower() in content:
+                            location_score += 0.5
+                    location_score = min(location_score, 1.0)
+                
+                if preferences_obj.location_keywords:
+                    for keyword in preferences_obj.location_keywords:
+                        if keyword.lower() in content:
+                            location_score += 0.3
+                    location_score = min(location_score, 1.0)
+                
+                preference_score += location_score * location_weight
+                total_weight += location_weight
+                
+                # Amenity preference matching
+                amenity_weight = preferences_obj.priority_weights.get('amenities', 0.6)
+                amenity_score = 0.0
+                
+                if preferences_obj.amenities:
+                    matched_amenities = 0
+                    for amenity in preferences_obj.amenities:
+                        if amenity.lower() in content:
+                            matched_amenities += 1
+                    amenity_score = matched_amenities / len(preferences_obj.amenities)
+                
+                preference_score += amenity_score * amenity_weight
+                total_weight += amenity_weight
+                
+                # Lifestyle preference matching
+                if preferences_obj.lifestyle_keywords:
+                    lifestyle_score = 0.0
+                    for keyword in preferences_obj.lifestyle_keywords:
+                        if keyword.lower() in content:
+                            lifestyle_score += 0.5
+                    lifestyle_score = min(lifestyle_score, 1.0)
+                    
+                    preference_score += lifestyle_score * 0.4  # Fixed weight for lifestyle
+                    total_weight += 0.4
+                
+                # Size preference matching (if size info is available)
+                size_weight = preferences_obj.priority_weights.get('size', 0.8)
+                size_score = 1.0  # Default to neutral
+                
+                # Try to extract size from metadata or content
+                house_size_str = metadata.get('house_size', '')
+                if house_size_str and any(char.isdigit() for char in house_size_str):
+                    try:
+                        # Extract numeric value from size string
+                        import re
+                        size_match = re.search(r'(\d{1,4}(?:,\d{3})*)', house_size_str.replace(',', ''))
+                        if size_match:
+                            property_size = int(size_match.group(1))
+                            
+                            # Score based on size preferences
+                            if preferences_obj.min_size and property_size < preferences_obj.min_size:
+                                size_score = 0.3
+                            elif preferences_obj.max_size and property_size > preferences_obj.max_size:
+                                size_score = 0.3
+                            else:
+                                size_score = 1.0
+                    except:
+                        pass
+                
+                preference_score += size_score * size_weight
+                total_weight += size_weight
+                
+                # Normalize preference score
+                if total_weight > 0:
+                    preference_score /= total_weight
+                
+                # Calculate composite score
+                composite_score = (semantic_score * semantic_weight + 
+                                 preference_score * (1 - semantic_weight))
+                
+                # Add scores to result
+                result['preference_score'] = preference_score
+                result['composite_score'] = composite_score
+                result['ranking_details'] = {
+                    'semantic_score': semantic_score,
+                    'preference_score': preference_score,
+                    'location_score': location_score if 'location_score' in locals() else 0.0,
+                    'amenity_score': amenity_score if 'amenity_score' in locals() else 0.0,
+                    'size_score': size_score if 'size_score' in locals() else 1.0
+                }
+            
+            # Sort by composite score
+            results.sort(key=lambda x: x.get('composite_score', 0.0), reverse=True)
+            
+            return results
+            
+        except Exception as e:
+            print(f"❌ Error in preference ranking: {e}")
+            return results
     
     def get_listing_by_id(self, listing_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a specific listing by ID"""
