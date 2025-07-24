@@ -26,8 +26,11 @@ load_dotenv()
 # Initialize FastAPI app
 app = FastAPI(
     title="HomeMatch",
-    description="Personalized Real Estate Recommendation System",
-    version="1.0.0"
+    description="Personalized Real Estate Recommendation System using RAG architecture",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/api/openapi.json"
 )
 
 # Initialize modules
@@ -56,6 +59,27 @@ async def home(request: Request):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "message": "HomeMatch API is running"}
+
+
+@app.get("/api/config")
+async def get_config():
+    """Get API configuration information"""
+    return {
+        "api_version": "1.0.0",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "features": {
+            "ai_powered_search": True,
+            "personalization": True,
+            "vector_search": True,
+            "synthetic_data_generation": True
+        },
+        "endpoints": {
+            "search": "/api/search",
+            "personalize": "/api/personalize", 
+            "generate_listings": "/api/generate-listings",
+            "preferences": "/api/preferences"
+        }
+    }
 
 
 @app.get("/api/listings")
