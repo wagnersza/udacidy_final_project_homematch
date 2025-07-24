@@ -226,25 +226,43 @@ class VectorStore:
             # Build metadata filters
             metadata_filters = {}
             
+            # Build metadata filters - ChromaDB requires specific structure
+            metadata_filters = {}
+            filter_conditions = []
+            
             # Bedroom filters
-            if preferences_obj.min_bedrooms is not None:
-                metadata_filters["bedrooms"] = {"$gte": preferences_obj.min_bedrooms}
-            if preferences_obj.max_bedrooms is not None:
-                if "bedrooms" in metadata_filters:
-                    metadata_filters["bedrooms"]["$lte"] = preferences_obj.max_bedrooms
+            if preferences_obj.min_bedrooms is not None and preferences_obj.max_bedrooms is not None:
+                if preferences_obj.min_bedrooms == preferences_obj.max_bedrooms:
+                    # Exact match
+                    filter_conditions.append({"bedrooms": {"$eq": preferences_obj.min_bedrooms}})
                 else:
-                    metadata_filters["bedrooms"] = {"$lte": preferences_obj.max_bedrooms}
+                    # Range - use $and to combine conditions
+                    filter_conditions.append({"bedrooms": {"$gte": preferences_obj.min_bedrooms}})
+                    filter_conditions.append({"bedrooms": {"$lte": preferences_obj.max_bedrooms}})
+            elif preferences_obj.min_bedrooms is not None:
+                filter_conditions.append({"bedrooms": {"$gte": preferences_obj.min_bedrooms}})
+            elif preferences_obj.max_bedrooms is not None:
+                filter_conditions.append({"bedrooms": {"$lte": preferences_obj.max_bedrooms}})
             
             # Bathroom filters
-            if preferences_obj.min_bathrooms is not None:
-                metadata_filters["bathrooms"] = {"$gte": preferences_obj.min_bathrooms}
-            if preferences_obj.max_bathrooms is not None:
-                if "bathrooms" in metadata_filters:
-                    metadata_filters["bathrooms"]["$lte"] = preferences_obj.max_bathrooms
+            if preferences_obj.min_bathrooms is not None and preferences_obj.max_bathrooms is not None:
+                if preferences_obj.min_bathrooms == preferences_obj.max_bathrooms:
+                    # Exact match
+                    filter_conditions.append({"bathrooms": {"$eq": preferences_obj.min_bathrooms}})
                 else:
-                    metadata_filters["bathrooms"] = {"$lte": preferences_obj.max_bathrooms}
+                    # Range - use $and to combine conditions
+                    filter_conditions.append({"bathrooms": {"$gte": preferences_obj.min_bathrooms}})
+                    filter_conditions.append({"bathrooms": {"$lte": preferences_obj.max_bathrooms}})
+            elif preferences_obj.min_bathrooms is not None:
+                filter_conditions.append({"bathrooms": {"$gte": preferences_obj.min_bathrooms}})
+            elif preferences_obj.max_bathrooms is not None:
+                filter_conditions.append({"bathrooms": {"$lte": preferences_obj.max_bathrooms}})
             
-            # Build document content filters for amenities and neighborhoods
+            # Combine all filter conditions using $and if there are multiple
+            if len(filter_conditions) == 1:
+                metadata_filters = filter_conditions[0]
+            elif len(filter_conditions) > 1:
+                metadata_filters = {"$and": filter_conditions}            # Build document content filters for amenities and neighborhoods
             document_filters = {}
             
             # Add neighborhood filters
