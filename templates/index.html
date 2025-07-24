@@ -39,6 +39,15 @@
                 <div id="results">
                     <!-- Results will be populated here -->
                 </div>
+                
+                <div class="actions">
+                    <button onclick="generateNewListings()" class="action-btn">
+                        🔄 Generate New Listings
+                    </button>
+                    <button onclick="showAllListings()" class="action-btn">
+                        📋 View All Listings
+                    </button>
+                </div>
             </section>
 
             <section class="info-section">
@@ -66,7 +75,7 @@
     </div>
 
     <script>
-        // Basic form handling - will be enhanced in later phases
+        // Form handling and API interactions
         document.getElementById('preferencesForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -78,6 +87,9 @@
                 return;
             }
             
+            // Show loading state
+            showLoading();
+            
             try {
                 const response = await fetch('/api/search', {
                     method: 'POST',
@@ -86,25 +98,145 @@
                 
                 const result = await response.json();
                 
-                // Show results section
-                document.getElementById('resultsSection').style.display = 'block';
-                document.getElementById('results').innerHTML = `
-                    <div class="placeholder-result">
-                        <h4>Search Results</h4>
-                        <p>${result.message}</p>
-                        <p><strong>Your preferences:</strong> ${preferences}</p>
-                        <p><em>Full functionality will be available after implementing the search engine and data generation modules.</em></p>
-                    </div>
-                `;
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Search failed');
+                }
                 
-                // Scroll to results
-                document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                // Display results
+                displayResults(result, preferences);
                 
             } catch (error) {
                 console.error('Error:', error);
-                alert('An error occurred while searching. Please try again.');
+                showError('An error occurred while searching. Please try again.');
             }
         });
+        
+        function showLoading() {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsDiv = document.getElementById('results');
+            
+            resultsSection.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading"></div>
+                    <p>Searching for your perfect home...</p>
+                </div>
+            `;
+            
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function displayResults(data, preferences) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (data.results && data.results.length > 0) {
+                let html = `
+                    <div class="search-summary">
+                        <h4>🎯 Found ${data.count} matches for: "${preferences}"</h4>
+                        <p>${data.message}</p>
+                    </div>
+                    <div class="listings-grid">
+                `;
+                
+                data.results.forEach(listing => {
+                    const relevanceScore = listing.relevance_score ? 
+                        `<span class="relevance">Relevance: ${(listing.relevance_score * 100).toFixed(0)}%</span>` : '';
+                    
+                    html += `
+                        <div class="listing-card">
+                            <div class="listing-header">
+                                <h5>${listing.neighborhood || 'Unknown Area'}</h5>
+                                ${relevanceScore}
+                            </div>
+                            <div class="listing-details">
+                                <p class="price">💰 ${listing.price || 'Price TBD'}</p>
+                                <p class="specs">🛏️ ${listing.bedrooms || 0} bed • 🛁 ${listing.bathrooms || 0} bath • 📏 ${listing.house_size || 'Size TBD'}</p>
+                                <p class="description">${listing.description || 'No description available'}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        <h4>No listings found</h4>
+                        <p>We couldn't find any listings matching your preferences: "${preferences}"</p>
+                        <p>Try adjusting your search criteria or generate new listings.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function showError(message) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsDiv = document.getElementById('results');
+            
+            resultsSection.style.display = 'block';
+            resultsDiv.innerHTML = `
+                <div class="error-message">
+                    <h4>❌ Error</h4>
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        async function generateNewListings() {
+            try {
+                showLoading();
+                const response = await fetch('/api/generate-listings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ count: 12 })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Generation failed');
+                }
+                
+                document.getElementById('results').innerHTML = `
+                    <div class="success-message">
+                        <h4>✅ ${result.message}</h4>
+                        <p>Generated ${result.count} new listings and added them to the database.</p>
+                        <p>You can now search for your preferences!</p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to generate new listings. Please try again.');
+            }
+        }
+        
+        async function showAllListings() {
+            try {
+                showLoading();
+                const response = await fetch('/api/listings');
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Failed to load listings');
+                }
+                
+                displayResults({
+                    message: `Showing all ${result.count} available listings`,
+                    count: result.count,
+                    results: result.listings
+                }, 'all listings');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to load all listings. Please try again.');
+            }
+        }
     </script>
 </body>
 </html>

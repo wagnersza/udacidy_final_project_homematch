@@ -1,0 +1,134 @@
+[
+  {
+    "neighborhood": "Green Oaks",
+    "price": "$500,000",
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this charming 3-bedroom, 3-bathroom home in the desirable Green Oaks neighborhood. This property features a cozy fireplace, a spacious backyard perfect for entertaining, and a newly renovated kitchen with stainless steel appliances. The open floor plan and natural light create a warm and inviting atmosphere perfect for families or those who love to host guests.",
+    "neighborhood_description": "Green Oaks is known for its lush greenery, peaceful streets, and strong sense of community. Residents enjoy easy access to hiking trails, parks, and upscale dining options. The neighborhood is also close to top-rated schools, making it an ideal location for families. With convenient transportation links to the city center, Green Oaks offers the perfect balance of suburban tranquility and urban connectivity.",
+    "id": "listing_001",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Sunset Hills",
+    "price": "$650,000",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this charming colonial-style home nestled in the sought-after Sunset Hills neighborhood. This property boasts a spacious layout with a newly renovated kitchen, hardwood floors throughout, and a cozy fireplace in the living room. Enjoy the serene backyard oasis perfect for relaxing or entertaining.",
+    "neighborhood_description": "Sunset Hills offers residents a peaceful suburban setting with easy access to parks, hiking trails, and top-rated schools. The neighborhood features a strong sense of community with local farmers' markets, trendy cafes, and boutique shops nearby. Commuters will appreciate the convenient location with quick access to highways and public transportation.",
+    "id": "listing_002",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Riverside Gardens",
+    "price": "$950,000",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this stunning colonial-style home in Riverside Gardens. This property boasts a spacious open floor plan, high ceilings, and a beautifully landscaped backyard with a pool. Recent updates include a gourmet kitchen with top-of-the-line appliances and a luxurious master suite. Enjoy the perfect blend of modern living and classic charm in this elegant home.",
+    "neighborhood_description": "Riverside Gardens is a sought-after neighborhood known for its tree-lined streets, proximity to the river, and vibrant community feel. Residents enjoy easy access to parks, jogging trails, and upscale shopping and dining options. With top-rated schools and convenient transportation links, this neighborhood offers a high quality of life for families and professionals alike.",
+    "id": "listing_003",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Downtown District",
+    "price": "$400,000",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "house_size": "2,000 sqft",
+    "description": "Welcome to this charming Victorian-style home in the heart of Downtown District. This property boasts intricate woodwork, stained glass windows, and a cozy fireplace. Recent updates include a modern kitchen and renovated bathrooms, blending historic charm with contemporary convenience. Enjoy the spacious backyard oasis perfect for entertaining.",
+    "neighborhood_description": "The Downtown District offers a vibrant urban lifestyle with trendy cafes, boutique shops, and cultural attractions just steps away. Residents enjoy easy access to public transportation, top-rated schools, and green spaces for outdoor activities. This neighborhood's unique blend of history and modern amenities make it a sought-after place to live.",
+    "id": "listing_004",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Maple Grove",
+    "price": "$1,400,000",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "This stunning 4-bedroom, 3-bathroom home in Maple Grove boasts a modern architectural style with high ceilings, large windows, and an open floor plan. Recent updates include a gourmet kitchen with top-of-the-line appliances, a luxurious master suite with a spa-like bathroom, and a spacious backyard with a pergola and fire pit. Enjoy the perfect blend of elegance and comfort in this meticulously maintained residence.",
+    "neighborhood_description": "Maple Grove is known for its family-friendly atmosphere, tree-lined streets, and top-rated schools. Residents can take advantage of the nearby parks, shopping centers, and restaurants. With easy access to highways and public transportation, Maple Grove offers a convenient commute to downtown and other parts of the city.",
+    "id": "listing_005",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Ocean View",
+    "price": "$500,000",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this charming beachside cottage in Ocean View, featuring a cozy fireplace, spacious deck with ocean views, and a newly renovated kitchen with stainless steel appliances. The open floor plan and vaulted ceilings provide a bright and airy feel, perfect for entertaining guests or relaxing with family. Retreat to the master suite with a luxurious spa-like bathroom and private balcony.",
+    "neighborhood_description": "Ocean View offers a laid-back coastal lifestyle with easy access to pristine beaches, surf spots, and seaside cafes. Residents enjoy community events, farmer's markets, and proximity to top-rated schools. Explore nearby hiking trails, parks, and boutique shops, all while being just a short drive away from the city center.",
+    "id": "listing_006",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Historic District",
+    "price": "$650,000",
+    "bedrooms": 4,
+    "bathrooms": 2,
+    "house_size": "2,800 sqft",
+    "description": "Step into this charming Victorian home with 4 spacious bedrooms, 2 updated bathrooms, and elegant architectural details throughout. The property boasts a gourmet kitchen, hardwood floors, and a cozy fireplace. Enjoy the spacious backyard perfect for entertaining guests or relaxing in a serene setting.",
+    "neighborhood_description": "Nestled in the heart of the Historic District, this neighborhood offers a mix of historic charm and modern conveniences. Enjoy strolling along tree-lined streets to local cafes, boutique shops, and parks. The area is known for its vibrant community events and easy access to public transportation for a quick commute to downtown.",
+    "id": "listing_007",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Tech Valley",
+    "price": "$900,000",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this stunning modern home in the heart of Tech Valley. This architectural gem features floor-to-ceiling windows, a gourmet kitchen with high-end appliances, a spacious master suite with a spa-like bathroom, and a beautifully landscaped backyard perfect for entertaining. Recent upgrades include smart home technology throughout and a new roof. Enjoy luxurious living in a vibrant tech-savvy community.",
+    "neighborhood_description": "Tech Valley offers a dynamic lifestyle with tech companies, trendy cafes, and green spaces at your doorstep. Residents enjoy easy access to Silicon Park, a hub for innovation, along with top-rated schools and nearby hiking trails. With excellent public transportation links and a strong sense of community, Tech Valley is the perfect blend of urban convenience and suburban tranquility.",
+    "id": "listing_008",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Suburban Heights",
+    "price": "$380,000",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this charming colonial-style home in Suburban Heights! This beautifully maintained property features a spacious layout, a cozy fireplace in the living room, a modern kitchen with stainless steel appliances, and a relaxing backyard oasis perfect for entertaining. Recent updates include a new roof and upgraded bathrooms, offering both comfort and style.",
+    "neighborhood_description": "Suburban Heights is a family-friendly neighborhood known for its top-rated schools, parks, and tree-lined streets. Residents enjoy easy access to local shops, restaurants, and recreational facilities. With a strong sense of community and close proximity to the city center, Suburban Heights offers the perfect blend of suburban tranquility and urban convenience.",
+    "id": "listing_009",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Arts Quarter",
+    "price": "$1,200,000 - $1,800,000",
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this stunning contemporary home in the heart of Arts Quarter featuring floor-to-ceiling windows, a spacious open-concept layout, and a chef's kitchen with high-end appliances. The property boasts a rooftop terrace with city views, a private courtyard, and a home office space. Recent renovations include a designer master suite and smart home technology throughout.",
+    "neighborhood_description": "Arts Quarter is a vibrant neighborhood known for its eclectic art galleries, trendy cafes, and boutique shops. Residents enjoy a lively community feel with regular art events and festivals. Nearby attractions include a renowned performing arts center, parks, and top-rated schools. Public transportation options make commuting a breeze, making Arts Quarter a sought-after location for those who appreciate arts and culture.",
+    "id": "listing_010",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "University District",
+    "price": "$500,000",
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "house_size": "2,000 sqft",
+    "description": "This charming 3-bedroom Craftsman-style home in the heart of the University District offers a perfect blend of historic charm and modern updates. The property features a cozy fireplace, a spacious backyard with a deck for entertaining, and a newly renovated kitchen with stainless steel appliances. The open floor plan and abundance of natural light make this home perfect for family living and hosting gatherings.",
+    "neighborhood_description": "The University District is known for its vibrant community atmosphere, with tree-lined streets, local cafes, and proximity to the university campus. Residents enjoy easy access to a variety of dining options, boutique shops, and parks. With top-rated schools nearby and excellent public transportation options, this neighborhood is ideal for those seeking a mix of urban convenience and a friendly, walkable environment.",
+    "id": "listing_011",
+    "generated_at": "2025-07-23"
+  },
+  {
+    "neighborhood": "Pine Ridge",
+    "price": "$650,000",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "house_size": "2,800 sqft",
+    "description": "Welcome to this charming Cape Cod style home in the desirable Pine Ridge neighborhood. This home features a spacious living room with a cozy fireplace, a renovated kitchen with stainless steel appliances, and a beautiful backyard perfect for entertaining. The primary suite offers a luxurious en-suite bathroom with a soaking tub. Enjoy the peacefulness and comfort of this well-maintained property.",
+    "neighborhood_description": "Pine Ridge is known for its tree-lined streets, friendly neighbors, and proximity to top-rated schools. Residents enjoy easy access to parks, hiking trails, and boutique shops. With convenient transportation options and a strong sense of community, Pine Ridge offers the perfect blend of suburban tranquility and urban convenience.",
+    "id": "listing_012",
+    "generated_at": "2025-07-23"
+  }
+]
